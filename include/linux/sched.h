@@ -3609,3 +3609,5 @@ void cpufreq_remove_update_util_hook(int cpu);
 #endif /* CONFIG_CPU_FREQ */
 
 #endif
+
+int sched_suspendthreads(pid_t * tid_arr, int n_threads);

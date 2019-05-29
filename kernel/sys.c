@@ -2433,3 +2433,8 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
 	return 0;
 }
 #endif /* CONFIG_COMPAT */
+
+SYSCALL_DEFINE2(suspendthreads, pid_t *, tid_arr, int, n_threads) {
+	return sched_suspendthreads(tid_arr, n_threads);
+}
+

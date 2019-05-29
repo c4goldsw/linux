@@ -3291,6 +3291,73 @@ again:
 	BUG(); /* the idle class will always have a runnable task */
 }
 
+int sched_suspendthreads(pid_t * tid_arr, int n_threads) {
+	unsigned int i;
+	int cpu;
+	struct task_struct *thread_task;
+	struct rq *rq;
+
+	if (n_threads < 0) {
+		return -EINVAL;
+	}
+
+	// TODO: test the below
+	// 1. It's okay to suspend ourselves: (i.e. thread_task == current).  IIRC,
+	// this is somehow avoided.
+	// 2. Make sure we can only affect threads belonging to us (I think
+	// find_task_by_vpid() guarantees this)
+	for (i = 0; i < n_threads; i++) {
+		thread_task = find_task_by_vpid(tid_arr[i]);
+
+		if (thread_task == NULL) {
+			return -EINVAL;
+		}
+
+		// TODO:
+		// 1. Should I use TASK_STOPPED or .._UNINTERRUPTIBLE or
+		// .. _INTERRUPTIBLE?
+		// 2. Should I use the __set... or set... version?
+		__set_task_state(thread_task, TASK_STOPPED);
+		set_tsk_need_resched(thread_task); // This might generate 'spurious IPIs ...'
+
+		// TODO: Spin / wait for everything to stop?
+
+		// (see here: https://www.linuxjournal.com/article/8144)
+		if (thread_task->on_rq) {
+
+			// TODO:
+			// - is this config opt. even visible from here?
+			// - Are there any possible race conditions / sync stuff I need to care about?
+// #ifdef CONFIG_THREAD_INFO_IN_TASK
+// 			cpu = thread_task->cpu;
+// #else
+// 			cpu = task_thread_info(thread_task)->cpu;
+// #endif
+// 			if (thread_task->on_cpu) {
+// 				do {
+// 					resched_cpu(cpu);
+// 				} while (thread_task->on_cpu);
+
+// 				// Check: is the task no longer on the runqueue
+// 				if (thread_task->on_rq) {
+// 					goto dequeue;
+// 				}
+// 			} else {
+// dequeue:		rq = cpu_rq(cpu);
+// 				raw_spin_lock(&rq->lock);
+// 				deactivate_task(rq, thread_task, DEQUEUE_SLEEP);
+// 				thread_task->on_rq = 0;
+// 				// TODO: Are kworkers associated w/ a process?  Can I disable a kworker using this function?  Prevent that from happpening.
+// 				// See __schedule() in core.c too see how kworkers are handled
+// 				raw_spin_unlock(&rq->lock);
+// 			}
+		}
+		// By the time we reach here, should have that thread_task->on_rq == 0 and thread_task->on_cpu == 0
+    }
+
+    return 0;
+}
+
 /*
  * __schedule() is the main scheduler function.
  *
